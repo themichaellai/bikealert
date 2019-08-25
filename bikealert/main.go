@@ -41,10 +41,32 @@ func run() error {
 		return iDistance < jDistance
 	})
 
+	fmt.Println("Bikes")
 	for _, bike := range bikes[:5] {
 		location := bike.CurrentPosition.Coordinates
 		dist := distance(latitude, longitude, location[1], location[0])
 		fmt.Printf("Bike %s %s (%0.2f miles)\n", bike.Name, bike.Address, dist)
+	}
+	fmt.Println("")
+
+	hubs, err := jumpClient.Hubs()
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(hubs, func(i, j int) bool {
+		iLocation := hubs[i].MiddlePoint.Coordinates
+		jLocation := hubs[j].MiddlePoint.Coordinates
+		iDistance := distance(latitude, longitude, iLocation[1], iLocation[0])
+		jDistance := distance(latitude, longitude, jLocation[1], jLocation[0])
+		return iDistance < jDistance
+	})
+
+	fmt.Println("Hubs")
+	for _, hub := range hubs[:5] {
+		location := hub.MiddlePoint.Coordinates
+		dist := distance(latitude, longitude, location[1], location[0])
+		fmt.Printf("Hub %s %s (%0.2f miles)\n", hub.Name, hub.Address, dist)
 	}
 	return nil
 }
