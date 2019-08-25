@@ -62,7 +62,12 @@ func run() error {
 	for _, bike := range bikes[:5] {
 		location := bike.CurrentPosition.Coordinates
 		dist := distance(latitude, longitude, location[1], location[0])
-		fmt.Printf("Bike %s %s (%0.2f miles)\n", bike.Name, bike.Address, dist)
+		fmt.Printf("Bike %s %s (%0.2f miles, %d%%)\n",
+			bike.Name,
+			bike.Address,
+			dist,
+			bike.EbikeBatteryLevel,
+		)
 	}
 	fmt.Println("")
 
@@ -86,7 +91,7 @@ func run() error {
 	for _, hub := range hubs[:5] {
 		location := hub.MiddlePoint.Coordinates
 		dist := distance(latitude, longitude, location[1], location[0])
-		fmt.Printf("Hub %s %s (%0.2f miles)\n", hub.Name, hub.Address, dist)
+		fmt.Printf("Hub %s %s (%d bikes) (%0.2f miles)\n", hub.Name, hub.Address, hub.AvailableBikes+hub.AvailableEbikes, dist)
 	}
 	return nil
 }
