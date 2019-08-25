@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/themichaellai/bikealert/jump"
@@ -28,11 +29,27 @@ func run() error {
 	}
 
 	jumpClient := jump.NewClient(jump.NetworkSanFrancisco)
-	bikes, err := jumpClient.Bikes()
-	if err != nil {
-		return err
-	}
 
+	var bikes []jump.Bike
+	var bikesErr error
+	bikesDone := doAsync(func() {
+		bikes, bikesErr = jumpClient.Bikes()
+	})
+
+	var hubs []jump.Hub
+	var hubsErr error
+	hubsDone := doAsync(func() {
+		hubs, hubsErr = jumpClient.Hubs()
+	})
+
+	select {
+	case <-bikesDone:
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timed out waiting for bikes response")
+	}
+	if bikesErr != nil {
+		return bikesErr
+	}
 	sort.Slice(bikes, func(i, j int) bool {
 		iLocation := bikes[i].CurrentPosition.Coordinates
 		jLocation := bikes[j].CurrentPosition.Coordinates
@@ -49,11 +66,6 @@ func run() error {
 	}
 	fmt.Println("")
 
-	hubs, err := jumpClient.Hubs()
-	if err != nil {
-		return err
-	}
-
 	sort.Slice(hubs, func(i, j int) bool {
 		iLocation := hubs[i].MiddlePoint.Coordinates
 		jLocation := hubs[j].MiddlePoint.Coordinates
@@ -62,6 +74,14 @@ func run() error {
 		return iDistance < jDistance
 	})
 
+	select {
+	case <-hubsDone:
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timed out waiting for hubs response")
+	}
+	if hubsErr != nil {
+		return hubsErr
+	}
 	fmt.Println("Hubs")
 	for _, hub := range hubs[:5] {
 		location := hub.MiddlePoint.Coordinates
@@ -102,4 +122,13 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
 
 	return 2 * r * math.Asin(math.Sqrt(h))
+}
+
+func doAsync(f func()) <-chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		defer close(ch)
+		f()
+	}()
+	return ch
 }
